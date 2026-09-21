@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "pytest-auto-api",
+    "policy": "只读参考；本目录不复制原项目代码、配置、证书、附件或真实业务数据",
+    "root": "D:/AI/1AAAA重要文件/接口自动化/pytest-auto-api",
+    "evidenceFiles": [
+      "README.md",
+      "utils/requests_tool/dependent_case.py",
+      "utils/requests_tool/teardown_control.py",
+      "utils/redis_tool/redis_control.py",
+      "utils/read_files_tools/regular_control.py",
+      "utils/read_files_tools/case_automatic_control.py"
+    ]
+  },
+  "fixtures": [
+    {
+      "id": "GET_QUERY_CACHE",
+      "title": "GET + Query + 缓存变量",
+      "category": "GET_QUERY_CACHE",
+      "source": {"file": "README.md", "lineStart": 190, "anchor": "如何发送get请求"},
+      "platformAsset": {"kind": "API_CASE", "operation": "GET /sms/list?phone=${phone}&pageNum=1", "evidenceFields": ["request.query", "cache.variable", "assertions"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["request", "response", "assertions"]}
+    },
+    {
+      "id": "POST_JSON_ASSERTIONS",
+      "title": "POST JSON + 多断言",
+      "category": "POST_JSON_ASSERTIONS",
+      "source": {"file": "README.md", "lineStart": 238, "anchor": "如何发送post请求"},
+      "platformAsset": {"kind": "API_CASE", "operation": "POST /user/create", "evidenceFields": ["request.json", "response.json", "assertions.multiple"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["request", "response", "assertions"]}
+    },
+    {
+      "id": "MULTI_DEPENDENCY_JSONPATH",
+      "title": "多接口依赖和 JSONPath 提取",
+      "category": "MULTI_DEPENDENCY_JSONPATH",
+      "source": {"file": "README.md", "lineStart": 347, "anchor": "多业务逻辑，如何编写测试用例"},
+      "platformAsset": {"kind": "SCENARIO", "operation": "create user -> JSONPath userId -> update user", "evidenceFields": ["dependencyGraph", "extraction", "resolvedRequest"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["steps", "extractions", "assertions"]}
+    },
+    {
+      "id": "MULTI_DATA_ROWS",
+      "title": "多数据行隔离执行",
+      "category": "MULTI_DATA_ROWS",
+      "source": {"file": "utils/read_files_tools/get_yaml_data_analysis.py", "lineStart": 39, "anchor": "tests 列表逐条清洗为用例数据"},
+      "platformAsset": {"kind": "API_CASE", "operation": "one case with three typed data rows", "evidenceFields": ["dataRow.index", "row.isolation", "report.group"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["dataRows", "steps", "rowResults"]}
+    },
+    {
+      "id": "SQL_ASSERTION",
+      "title": "SQL 断言",
+      "category": "SQL_ASSERTION",
+      "source": {"file": "README.md", "lineStart": 700, "anchor": "用例中如何进行接口断言和数据库断言"},
+      "platformAsset": {"kind": "SCENARIO", "operation": "HTTP response + read-only SQL result assertion", "evidenceFields": ["sql.summary", "query.result", "assertions"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["sql", "response", "assertions"]}
+    },
+    {
+      "id": "REDIS_READ_WRITE",
+      "title": "Redis 读写",
+      "category": "REDIS_READ_WRITE",
+      "source": {"file": "utils/redis_tool/redis_control.py", "lineStart": 13, "anchor": "RedisDB"},
+      "platformAsset": {"kind": "SCENARIO", "operation": "GET/SET/DEL through approved Redis commands", "evidenceFields": ["redis.command", "redis.resultSummary", "write.confirmation"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["redis", "extractions", "steps"]}
+    },
+    {
+      "id": "FILE_UPLOAD",
+      "title": "文件上传",
+      "category": "FILE_UPLOAD",
+      "source": {"file": "README.md", "lineStart": 284, "anchor": "如何测试上传文件接口"},
+      "platformAsset": {"kind": "API_CASE", "operation": "POST /upload (multipart)", "evidenceFields": ["request.multipart", "file.sha256", "response.status"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["request", "attachments", "response"]}
+    },
+    {
+      "id": "DYNAMIC_RANDOM_DATA",
+      "title": "动态 UUID、时间和随机数据",
+      "category": "DYNAMIC_RANDOM_DATA",
+      "source": {"file": "README.md", "lineStart": 638, "anchor": "用例中如何生成随机数据"},
+      "platformAsset": {"kind": "SCENARIO", "operation": "approved UUID/time/random providers", "evidenceFields": ["generated.value", "provider", "request"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["resolvedRequest", "variables", "steps"]}
+    },
+    {
+      "id": "SETUP_CLEANUP",
+      "title": "前置造数和失败后清理",
+      "category": "SETUP_CLEANUP",
+      "source": {"file": "README.md", "lineStart": 770, "anchor": "使用teardown功能，做数据清洗"},
+      "platformAsset": {"kind": "SCENARIO", "operation": "setup -> main -> always cleanup API/SQL", "evidenceFields": ["main.status", "cleanup.status", "cleanup.failure"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["mainResult", "cleanupResult", "audit"]}
+    },
+    {
+      "id": "NOTIFICATION_EXPORT",
+      "title": "通知和报告导出",
+      "category": "NOTIFICATION_EXPORT",
+      "source": {"file": "README.md", "lineStart": 871, "anchor": "生成allure报告"},
+      "platformAsset": {"kind": "RUN_AND_REPORT", "operation": "completed run -> sanitized Webhook + HTML/Allure export", "evidenceFields": ["notification.summary", "html.export", "allure.archive"]},
+      "expectedEvidence": {"status": "PASSED", "reportFields": ["run", "notification", "export"]}
+    }
+  ],
+  "securityCases": [
+    {"id": "SECRET_REDACTION", "threat": "密钥出现在请求、响应、报告或模型上下文", "expected": "REDACT", "verification": {"state": "COVERED", "test": "EnvironmentSecretPostgresqlIntegrationTest;ReportSanitizerTest;AiSecurityContractTest"}, "evidence": "占位符保留，明文不出现在持久化和展示响应"},
+    {"id": "SSRF_PRIVATE_TARGET", "threat": "请求目标越过项目网络白名单访问私网地址", "expected": "REJECT", "verification": {"state": "PENDING", "followUp": "增加项目级目标白名单和重定向后的最终目标复核，再补真实 HTTP 负向测试"}, "evidence": "当前需求要求显式白名单；本首片只登记缺口，不把未实现能力标成通过"},
+    {"id": "DANGEROUS_SQL", "threat": "未确认的写 SQL、DELETE、DDL 或存储过程", "expected": "REJECT", "verification": {"state": "COVERED", "test": "SqlStepValidatorTest;JdbcSqlExecutorTest;JdbcSqlExecutorContainerTest"}, "evidence": "平台校验和 Runner 白名单均拒绝执行"},
+    {"id": "UNSAFE_FILE", "threat": "文件路径穿越、未知文件或敏感附件上传", "expected": "REJECT", "verification": {"state": "COVERED", "test": "JmeterPlanCompilerTest.rejectsMultipartFilePathTraversal"}, "evidence": "路径规范化、扩展名和大小校验均有失败证据"},
+    {"id": "PROMPT_INJECTION", "threat": "响应或 Curl 中要求忽略规则、读取密钥或执行脚本", "expected": "REDACT", "verification": {"state": "COVERED", "test": "AiSecurityContractTest;ImportParserContractTest"}, "evidence": "作为不可信数据传给模型，工具权限和确认门禁不变"},
+    {"id": "SCRIPT_COMPONENT", "threat": "JSR223、BeanShell、Groovy、Shell 等任意脚本组件", "expected": "REJECT", "verification": {"state": "COVERED", "test": "JmeterPlanCompilerTest;JmeterControlFlowPlanCompilerTest;F401SecurityContractTest"}, "evidence": "计划校验拒绝脚本组件，JMX 不生成脚本节点"}
+  ]
+}

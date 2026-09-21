@@ -1,0 +1,56 @@
+# Java 构建产物（覆盖所有模块）
+**/target/
+
+# 前端安装、构建和浏览器验收产物
+**/node_modules/
+**/dist/
+/.playwright-cli/
+/playwright-report/
+/test-results/
+
+# 根目录运行产物、报告和本地数据
+/runtime/
+/.runtime/
+/runs/
+/tmp/
+/cache/
+/reports/
+/allure-report/
+/output/
+/jmeter.log
+/.tmp-f405-sanitize-run/
+/.superpowers/f4-05-evidence/
+**/__pycache__/
+**/test-results/
+deployment/scripts/test-fixtures/f4-05.env
+
+# 部署目录运行产物、报告和本地数据
+/deployment/runtime/
+/deployment/.runtime/
+/deployment/runs/
+/deployment/tmp/
+/deployment/cache/
+/deployment/reports/
+/deployment/allure-report/
+/deployment/output/
+
+# 本地配置、证书、私钥和密钥库
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# IDE 和操作系统文件
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

@@ -1,0 +1,93 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${AUTOTEST_DB_NAME:-autotest}
+      POSTGRES_USER: ${AUTOTEST_DB_USERNAME:-autotest}
+      POSTGRES_PASSWORD: ${AUTOTEST_DB_PASSWORD:?必须设置 AUTOTEST_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=$$POSTGRES_USER --dbname=$$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  platform-api:
+    build:
+      context: ../platform-api
+      dockerfile: Dockerfile
+    image: autotest/platform-api:0.1.0
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${AUTOTEST_DB_NAME:-autotest}
+      SPRING_DATASOURCE_USERNAME: ${AUTOTEST_DB_USERNAME:-autotest}
+      SPRING_DATASOURCE_PASSWORD: ${AUTOTEST_DB_PASSWORD:?必须设置 AUTOTEST_DB_PASSWORD}
+      AUTOTEST_ADMIN_USERNAME: ${AUTOTEST_ADMIN_USERNAME:?必须设置 AUTOTEST_ADMIN_USERNAME}
+      AUTOTEST_ADMIN_PASSWORD: ${AUTOTEST_ADMIN_PASSWORD:?必须设置 AUTOTEST_ADMIN_PASSWORD}
+      AUTOTEST_MASTER_KEY: ${AUTOTEST_MASTER_KEY:?必须设置 AUTOTEST_MASTER_KEY}
+      AUTOTEST_RUNNER_CALLBACK_TOKEN: ${AUTOTEST_RUNNER_CALLBACK_TOKEN:?必须设置 AUTOTEST_RUNNER_CALLBACK_TOKEN}
+      SERVER_PORT: 8080
+      AUTOTEST_SESSION_COOKIE_SECURE: ${AUTOTEST_SESSION_COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${AUTOTEST_API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1:8080/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 18
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    image: autotest/web:0.1.0
+    depends_on:
+      platform-api:
+        condition: service_healthy
+    ports:
+      - "${AUTOTEST_WEB_PORT:-4173}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1/"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  runner-app:
+    build:
+      context: ../runner-app
+      dockerfile: Dockerfile
+    image: autotest/runner:0.1.0
+    working_dir: /work/runs
+    user: "10001:10001"
+    environment:
+      JAVA_TOOL_OPTIONS: -Djava.awt.headless=true
+      PLATFORM_DB_URL: jdbc:postgresql://postgres:5432/${AUTOTEST_DB_NAME:-autotest}
+      PLATFORM_DB_USERNAME: ${AUTOTEST_DB_USERNAME:-autotest}
+      PLATFORM_DB_PASSWORD: ${AUTOTEST_DB_PASSWORD:?必须设置 AUTOTEST_DB_PASSWORD}
+      AUTOTEST_PLATFORM_API_URL: http://platform-api:8080
+      AUTOTEST_RUNNER_CALLBACK_TOKEN: ${AUTOTEST_RUNNER_CALLBACK_TOKEN:?必须设置 AUTOTEST_RUNNER_CALLBACK_TOKEN}
+      AUTOTEST_RUNNER_ID: ${AUTOTEST_RUNNER_ID:-}
+      AUTOTEST_RUNNER_WORK_ROOT: /work/runs
+      AUTOTEST_JMETER_VERSION: 5.6.3
+    depends_on:
+      platform-api:
+        condition: service_healthy
+    volumes:
+      - runner-runs:/work/runs
+    command: ["java", "-jar", "/opt/runner/runner.jar"]
+    healthcheck:
+      test: ["CMD-SHELL", "jmeter --version >/dev/null 2>&1 && test -s /opt/runner/runner.jar"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  runner-runs:

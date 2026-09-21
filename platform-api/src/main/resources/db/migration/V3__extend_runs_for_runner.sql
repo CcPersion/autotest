@@ -1,0 +1,6 @@
+ALTER TABLE runs
+    ADD COLUMN exit_code INTEGER,
+    ADD COLUMN jmx_path VARCHAR(512),
+    ADD COLUMN jtl_path VARCHAR(512),
+    ADD COLUMN log_path VARCHAR(512),
+    ADD COLUMN cancel_requested BOOLEAN NOT NULL DEFAULT FALSE;

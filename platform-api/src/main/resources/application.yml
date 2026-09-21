@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: platform-api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  flyway:
+    enabled: true
+
+autotest:
+  admin:
+    username: ${AUTOTEST_ADMIN_USERNAME:}
+    password: ${AUTOTEST_ADMIN_PASSWORD:}
+  storage:
+    minio:
+      endpoint: ${AUTOTEST_MINIO_ENDPOINT:}
+      access-key: ${AUTOTEST_MINIO_ACCESS_KEY:}
+      secret-key: ${AUTOTEST_MINIO_SECRET_KEY:}
+      bucket: ${AUTOTEST_MINIO_BUCKET:autotest-file-assets}
+      local-root: ${AUTOTEST_FILE_ASSET_ROOT:${java.io.tmpdir}/autotest-file-assets}
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${AUTOTEST_SESSION_COOKIE_SECURE:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

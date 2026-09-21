@@ -1,0 +1,85 @@
+#!/bin/bash
+set -u
+
+record_file="${FAKE_CURL_RECORD:-}"
+login_count_file="${FAKE_CURL_LOGIN_COUNT:-}"
+status_count_file="${FAKE_CURL_STATUS_COUNT:-}"
+runner_id_initial="${FAKE_RUNNER_ID_INITIAL:-00000000-0000-0000-0000-000000000099}"
+runner_id_after_restart="${FAKE_RUNNER_ID_AFTER_RESTART:-${runner_id_initial}}"
+cookie=""
+url=""
+body=""
+cookie_jar=""
+while (($# > 0)); do
+  case "$1" in
+    --cookie)
+      cookie="$2"
+      [[ -f "$2" ]] && cookie="$(cat "$2")"
+      shift 2 ;;
+    --cookie-jar)
+      cookie_jar="$2"
+      shift 2 ;;
+    --data-binary)
+      if [[ "$2" == "@-" ]]; then body="$(cat)"; else shift; body="$2"; fi
+      shift 2 ;;
+    http://*|https://*) url="$1"; shift ;;
+    *) shift ;;
+  esac
+done
+
+current_login_count() {
+  if [[ -n "${login_count_file}" && -f "${login_count_file}" ]]; then
+    cat "${login_count_file}"
+  else
+    printf '0\n'
+  fi
+}
+
+current_status_count() {
+  if [[ -n "${status_count_file}" && -f "${status_count_file}" ]]; then
+    cat "${status_count_file}"
+  else
+    printf '0\n'
+  fi
+}
+
+if [[ -n "${record_file}" ]]; then
+  if [[ "${url}" == */api/v1/auth/login ]]; then
+    username="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("username", ""))' <<< "${body}")"
+    next_login="$(( $(current_login_count) + 1 ))"
+    [[ -z "${login_count_file}" ]] || printf '%s\n' "${next_login}" > "${login_count_file}"
+    printf 'login_count=%s\n' "${next_login}" >> "${record_file}"
+    printf 'login_username=%s\n' "${username}" >> "${record_file}"
+  elif [[ "${url}" == */api/v1/runners/status ]]; then
+    status_number="$(( $(current_status_count) + 1 ))"
+    [[ -z "${status_count_file}" ]] || printf '%s\n' "${status_number}" > "${status_count_file}"
+    printf 'runner_cookie=%s\n' "${cookie}" >> "${record_file}"
+    printf 'runner_status_count=%s\n' "${status_number}" >> "${record_file}"
+  fi
+fi
+
+if [[ -n "${cookie_jar}" ]]; then
+  session_number="$(( $(current_login_count) ))"
+  printf 'fake-session-%s\n' "${session_number}" > "${cookie_jar}"
+fi
+if [[ "${url}" == */api/v1/auth/login ]]; then
+  printf '{"ok":true}\n'
+elif [[ "${url}" == */api/v1/runners/status ]]; then
+  session_number="$(( $(current_login_count) ))"
+  [[ "${cookie}" == "fake-session-${session_number}" ]] || exit 22
+  status_number="$(( $(current_status_count) ))"
+  runner_id="${runner_id_initial}"
+  if [[ "${status_number}" -ge 3 ]]; then
+    last_seen="2026-09-13T00:00:01Z"
+    runner_id="${runner_id_after_restart}"
+  else
+    last_seen="2026-09-13T00:00:00Z"
+  fi
+  printf '[{"runnerId":"%s","status":"ONLINE","lastSeenAt":"%s"}]\n' "${runner_id}" "${last_seen}"
+elif [[ "${url}" == */report ]]; then
+  session_number="$(( $(current_login_count) ))"
+  [[ "${cookie}" == "fake-session-${session_number}" ]] || exit 22
+  printf '{"status":"PASSED","steps":[{"status":"PASSED"}],"suiteMembers":[{"status":"PASSED"}]}\n'
+else
+  printf '{"ok":true}\n'
+fi

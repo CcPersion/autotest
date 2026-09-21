@@ -1,0 +1,603 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI 接口自动化平台 F1-05 API",
+    "version": "0.1.0",
+    "description": "F1-05 仅提供项目内 GET/POST JSON 接口定义与接口用例的保存、查询、更新和归档合同。"
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "security": [
+    { "sessionCookie": [] }
+  ],
+  "paths": {
+    "/api/v1/projects/{projectId}/api-definitions": {
+      "get": {
+        "operationId": "listApiDefinitions",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/ModuleId" },
+          { "$ref": "#/components/parameters/IncludeArchived" }
+        ],
+        "responses": {
+          "200": {
+            "description": "接口定义列表",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/DefinitionResponse" } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "post": {
+        "operationId": "createApiDefinition",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProjectId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionWrite" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "接口定义已创建",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/api-definitions/{definitionId}": {
+      "get": {
+        "operationId": "getApiDefinition",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "接口定义详情",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "put": {
+        "operationId": "updateApiDefinition",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "接口定义已更新",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/api-definitions/{definitionId}/archive": {
+      "post": {
+        "operationId": "archiveApiDefinition",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevisionRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "接口定义已归档",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DefinitionResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/api-definitions/{definitionId}/cases": {
+      "get": {
+        "operationId": "listApiCases",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" },
+          { "$ref": "#/components/parameters/IncludeArchived" }
+        ],
+        "responses": {
+          "200": {
+            "description": "接口用例列表",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CaseResponse" } } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "post": {
+        "operationId": "createApiCase",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseWrite" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "接口用例已创建",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/api-definitions/{definitionId}/cases/{caseId}": {
+      "get": {
+        "operationId": "getApiCase",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" },
+          { "$ref": "#/components/parameters/CaseId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "接口用例详情",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "put": {
+        "operationId": "updateApiCase",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" },
+          { "$ref": "#/components/parameters/CaseId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "接口用例已更新",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/api-definitions/{definitionId}/cases/{caseId}/archive": {
+      "post": {
+        "operationId": "archiveApiCase",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/DefinitionId" },
+          { "$ref": "#/components/parameters/CaseId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevisionRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "接口用例已归档",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "JSESSIONID" },
+      "csrfToken": { "type": "apiKey", "in": "header", "name": "X-XSRF-TOKEN" }
+    },
+    "parameters": {
+      "ProjectId": { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "DefinitionId": { "name": "definitionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "CaseId": { "name": "caseId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "ModuleId": { "name": "moduleId", "in": "query", "required": false, "schema": { "type": ["string", "null"], "format": "uuid" } },
+      "IncludeArchived": { "name": "includeArchived", "in": "query", "required": false, "schema": { "type": "boolean", "default": false } }
+    },
+    "responses": {
+      "BadRequest": { "description": "请求或字段校验失败", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "Unauthorized": { "description": "未登录或会话无效", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "Forbidden": { "description": "无权访问当前资源", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "NotFound": { "description": "资源不存在或不属于当前项目", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "Conflict": { "description": "名称、父资源或 revision 冲突", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+    },
+    "schemas": {
+      "JsonValue": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" },
+          { "type": "array", "items": { "$ref": "#/components/schemas/JsonValue" } },
+          { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/JsonValue" } }
+        ]
+      },
+      "JsonObject": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/JsonValue" } },
+      "HttpMethod": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] },
+      "RequestBodyType": { "type": "string", "enum": ["NONE", "JSON", "TEXT", "URLENCODED", "MULTIPART"] },
+      "AssertionType": { "type": "string", "enum": ["STATUS", "JSON_PATH", "JMES_PATH", "XPATH", "BODY", "HEADER", "COOKIE", "SCHEMA", "RESPONSE_TIME"] },
+      "JsonPathOperator": { "type": "string", "enum": ["EXISTS", "NOT_EXISTS", "EQUALS", "NOT_EQUALS", "CONTAINS", "NOT_CONTAINS"] },
+      "StatusOperator": { "type": "string", "enum": ["EQUALS"] },
+      "ResponseOperator": { "type": "string", "enum": ["EQUALS", "CONTAINS", "NOT_CONTAINS", "MATCHES"] },
+      "SchemaOperator": { "type": "string", "enum": ["VALIDATE"] },
+      "ResponseTimeOperator": { "type": "string", "enum": ["LESS_THAN"] },
+      "PathParam": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "value"],
+        "properties": { "name": { "type": "string", "minLength": 1 }, "value": { "type": "string" } }
+      },
+      "EnabledParameter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "value", "enabled"],
+        "properties": { "name": { "type": "string", "minLength": 1 }, "value": { "type": "string" }, "enabled": { "type": "boolean" } }
+      },
+      "RequestBodyNone": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "properties": { "type": { "type": "string", "enum": ["NONE"] } }
+      },
+      "RequestBodyJson": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": { "type": { "type": "string", "enum": ["JSON"] }, "value": { "$ref": "#/components/schemas/JsonValue" } }
+      },
+      "RequestBodyText": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": { "type": { "type": "string", "enum": ["TEXT"] }, "value": { "type": "string" } }
+      },
+      "RequestBodyUrlEncoded": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": { "type": { "type": "string", "enum": ["URLENCODED"] }, "value": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } } }
+      },
+      "MultipartFile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "path"],
+        "properties": { "name": { "type": "string" }, "path": { "type": "string" }, "mimeType": { "type": "string" }, "enabled": { "type": "boolean" } }
+      },
+      "RequestBodyMultipart": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": { "type": { "type": "string", "enum": ["MULTIPART"] }, "value": { "type": "object", "additionalProperties": false, "properties": { "fields": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } }, "files": { "type": "array", "items": { "$ref": "#/components/schemas/MultipartFile" } } } } }
+      },
+      "RequestOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "defaultHeaders": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } },
+          "followRedirects": { "type": "boolean", "default": true },
+          "connectTimeoutMillis": { "type": "integer", "minimum": 0 },
+          "responseTimeoutMillis": { "type": "integer", "minimum": 0 },
+          "proxy": { "oneOf": [{ "$ref": "#/components/schemas/ProxyOptions" }, { "type": "null" }] },
+          "clientCertificate": { "oneOf": [{ "$ref": "#/components/schemas/Pkcs12ClientCertificate" }, { "type": "null" }] }
+        }
+      },
+      "Pkcs12ClientCertificate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "secretRef", "passwordRef"],
+        "properties": {
+          "type": { "const": "PKCS12" },
+          "secretRef": { "type": "string", "pattern": "^\\$\\{secret:[A-Za-z0-9][A-Za-z0-9._-]*\\}$" },
+          "passwordRef": { "type": "string", "pattern": "^\\$\\{secret:[A-Za-z0-9][A-Za-z0-9._-]*\\}$" }
+        }
+      },
+      "ProxyOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "port"],
+        "properties": { "scheme": { "type": "string" }, "host": { "type": "string" }, "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "username": { "type": "string" }, "password": { "type": "string" } }
+      },
+      "RequestSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pathParams", "query", "headers", "body"],
+        "properties": {
+          "pathParams": { "type": "array", "items": { "$ref": "#/components/schemas/PathParam" } },
+          "query": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } },
+          "headers": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } },
+          "cookies": { "type": "array", "items": { "$ref": "#/components/schemas/EnabledParameter" } },
+          "body": { "oneOf": [{ "$ref": "#/components/schemas/RequestBodyNone" }, { "$ref": "#/components/schemas/RequestBodyJson" }, { "$ref": "#/components/schemas/RequestBodyText" }, { "$ref": "#/components/schemas/RequestBodyUrlEncoded" }, { "$ref": "#/components/schemas/RequestBodyMultipart" }] },
+          "options": { "$ref": "#/components/schemas/RequestOptions" }
+        }
+      },
+      "CaseSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pathParams", "query", "headers", "body"],
+        "properties": {
+          "pathParams": { "type": "object", "additionalProperties": { "type": "string" } },
+          "query": { "type": "object", "additionalProperties": { "type": "string" } },
+          "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+          "cookies": { "type": "object", "additionalProperties": { "type": "string" } },
+          "body": { "oneOf": [{ "$ref": "#/components/schemas/RequestBodyNone" }, { "$ref": "#/components/schemas/RequestBodyJson" }, { "$ref": "#/components/schemas/RequestBodyText" }, { "$ref": "#/components/schemas/RequestBodyUrlEncoded" }, { "$ref": "#/components/schemas/RequestBodyMultipart" }] },
+          "extractors": { "type": "array", "items": { "$ref": "#/components/schemas/Extractor" } }
+        }
+      },
+      "Extractor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expression", "variable"],
+        "properties": {
+          "type": { "type": "string", "enum": ["JSON_PATH", "JMESPATH", "XPATH", "REGEX", "HEADER", "COOKIE"] },
+          "expression": { "type": "string", "minLength": 1 },
+          "variable": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$", "minLength": 1 },
+          "defaultValue": { "$ref": "#/components/schemas/JsonValue" },
+          "failIfMissing": { "type": "boolean", "default": true }
+        }
+      },
+      "StatusAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "operator", "expected"],
+        "properties": {
+          "type": { "type": "string", "enum": ["STATUS"] },
+          "operator": { "$ref": "#/components/schemas/StatusOperator" },
+          "expected": { "type": "integer", "minimum": 100, "maximum": 599 }
+        }
+      },
+      "JsonPathExistsAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expression", "operator"],
+        "properties": {
+          "type": { "type": "string", "enum": ["JSON_PATH"] },
+          "expression": { "type": "string", "pattern": "^\\$.*", "minLength": 1 },
+          "operator": { "type": "string", "enum": ["EXISTS"] }
+        }
+      },
+      "JsonPathEqualsAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expression", "operator", "expected"],
+        "properties": {
+          "type": { "type": "string", "enum": ["JSON_PATH"] },
+          "expression": { "type": "string", "pattern": "^\\$.*", "minLength": 1 },
+          "operator": { "type": "string", "enum": ["EQUALS"] },
+          "expected": { "$ref": "#/components/schemas/JsonValue" }
+        }
+      },
+      "JmesPathAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expression", "operator"],
+        "properties": {
+          "type": { "type": "string", "enum": ["JMES_PATH"] },
+          "expression": { "type": "string", "minLength": 1 },
+          "operator": { "$ref": "#/components/schemas/JsonPathOperator" },
+          "expected": { "$ref": "#/components/schemas/JsonValue" }
+        }
+      },
+      "XPathAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expression", "operator"],
+        "properties": {
+          "type": { "type": "string", "enum": ["XPATH"] },
+          "expression": { "type": "string", "minLength": 1 },
+          "operator": { "type": "string", "enum": ["EXISTS", "NOT_EXISTS"] }
+        }
+      },
+      "ResponseAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "operator", "expected"],
+        "properties": {
+          "type": { "type": "string", "enum": ["BODY", "HEADER", "COOKIE"] },
+          "operator": { "$ref": "#/components/schemas/ResponseOperator" },
+          "expected": { "$ref": "#/components/schemas/JsonValue" }
+        }
+      },
+      "ResponseTimeAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "operator", "expected"],
+        "properties": {
+          "type": { "type": "string", "enum": ["RESPONSE_TIME"] },
+          "operator": { "$ref": "#/components/schemas/ResponseTimeOperator" },
+          "expected": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "SchemaAssertion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "operator", "expected"],
+        "properties": {
+          "type": { "type": "string", "enum": ["SCHEMA"] },
+          "operator": { "$ref": "#/components/schemas/SchemaOperator" },
+          "expected": { "type": "object" }
+        }
+      },
+      "Assertion": { "anyOf": [{ "$ref": "#/components/schemas/StatusAssertion" }, { "$ref": "#/components/schemas/JsonPathExistsAssertion" }, { "$ref": "#/components/schemas/JsonPathEqualsAssertion" }, { "$ref": "#/components/schemas/JmesPathAssertion" }, { "$ref": "#/components/schemas/XPathAssertion" }, { "$ref": "#/components/schemas/ResponseAssertion" }, { "$ref": "#/components/schemas/SchemaAssertion" }, { "$ref": "#/components/schemas/ResponseTimeAssertion" }] },
+      "DefinitionWrite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "method", "urlTemplate", "requestSpec"],
+        "properties": {
+          "moduleId": { "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }] },
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "method": { "$ref": "#/components/schemas/HttpMethod" },
+          "urlTemplate": { "type": "string", "minLength": 1 },
+          "requestSpec": { "$ref": "#/components/schemas/RequestSpec" },
+          "revision": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "DefinitionUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "method", "urlTemplate", "requestSpec", "revision"],
+        "properties": {
+          "moduleId": { "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }] },
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "method": { "$ref": "#/components/schemas/HttpMethod" },
+          "urlTemplate": { "type": "string", "minLength": 1 },
+          "requestSpec": { "$ref": "#/components/schemas/RequestSpec" },
+          "revision": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "DefinitionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "projectId", "moduleId", "name", "method", "urlTemplate", "requestSpec", "revision", "archived", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "projectId": { "type": "string", "format": "uuid" },
+          "moduleId": { "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }] },
+          "name": { "type": "string" },
+          "method": { "$ref": "#/components/schemas/HttpMethod" },
+          "urlTemplate": { "type": "string" },
+          "requestSpec": { "$ref": "#/components/schemas/RequestSpec" },
+          "revision": { "type": "integer" },
+          "archived": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CaseWrite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "caseSpec", "variables", "assertions"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "caseSpec": { "$ref": "#/components/schemas/CaseSpec" },
+          "variables": { "$ref": "#/components/schemas/JsonObject" },
+          "assertions": { "type": "array", "items": { "$ref": "#/components/schemas/Assertion" } },
+          "revision": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "CaseUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "caseSpec", "variables", "assertions", "revision"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "caseSpec": { "$ref": "#/components/schemas/CaseSpec" },
+          "variables": { "$ref": "#/components/schemas/JsonObject" },
+          "assertions": { "type": "array", "items": { "$ref": "#/components/schemas/Assertion" } },
+          "revision": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "CaseResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "projectId", "apiDefinitionId", "name", "caseSpec", "variables", "assertions", "revision", "archived", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "projectId": { "type": "string", "format": "uuid" },
+          "apiDefinitionId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "caseSpec": { "$ref": "#/components/schemas/CaseSpec" },
+          "variables": { "$ref": "#/components/schemas/JsonObject" },
+          "assertions": { "type": "array", "items": { "$ref": "#/components/schemas/Assertion" } },
+          "revision": { "type": "integer" },
+          "archived": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "RevisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["revision"],
+        "properties": { "revision": { "type": "integer", "minimum": 0 } }
+      },
+      "FieldError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "code", "message"],
+        "properties": { "path": { "type": "string" }, "code": { "type": "string" }, "message": { "type": "string" } }
+      },
+      "ErrorDetails": {
+        "type": "object",
+        "properties": {
+          "fieldErrors": { "type": "array", "items": { "$ref": "#/components/schemas/FieldError" } }
+        },
+        "additionalProperties": true
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "details", "traceId"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/ErrorDetails" },
+              { "type": "null" }
+            ]
+          },
+          "traceId": { "type": "string" }
+        }
+      }
+    }
+  }
+}

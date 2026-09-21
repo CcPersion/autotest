@@ -1,0 +1,39 @@
+#!/bin/bash
+set -u
+
+if [[ -n "${FAKE_NPM_RECORD:-}" ]]; then
+  printf 'playwright_username=%s\n' "${E2E_ADMIN_USERNAME:-}" >> "${FAKE_NPM_RECORD}"
+fi
+if [[ -n "${FAKE_LEAK_FILE:-}" ]]; then
+  mkdir -p "$(dirname "${FAKE_LEAK_FILE}")"
+  printf '%s\n' "${FAKE_LEAK_SENTINEL:-f405-test-db-password}" > "${FAKE_LEAK_FILE}"
+fi
+if [[ "${FAKE_SANITIZE_SENTINELS:-}" == "1" ]]; then
+  printf '%s\n' 'Authorization: CustomScheme dynamic-auth-header-sentinel'
+  printf '%s\n' '{"authorization":"dynamic-json-authorization-sentinel","token":"dynamic-json-token-sentinel","cookie":"dynamic-json-cookie-sentinel","password":"dynamic-json-password-sentinel","secret":"dynamic-json-secret-sentinel","key":"dynamic-json-key-sentinel","headers":[{"name":"X-Dynamic-Token","value":"dynamic-header-token-sentinel"},{"name":"X-API-Key","value":"dynamic-header-api-key-sentinel"},{"name":"Authorization","value":"Bearer dynamic-header-bearer-sentinel"}]}'
+  printf '%s\n' '{"authorization":"dynamic-ndjson-authorization-sentinel","token":"dynamic-ndjson-token-sentinel"}'
+  printf '%s\n' '{"headers":{"X-API-Key":"dynamic-ndjson-api-key-sentinel"},"password":"dynamic-ndjson-password-sentinel"}'
+fi
+if [[ "${FAKE_SANITIZE_SENTINELS:-}" == "2" ]]; then
+  cat <<'JSON'
+{
+  "request": {
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "CustomScheme dynamic-pretty-json-authorization-sentinel"
+      }
+    ],
+    "payload": "{\"authorization\":\"dynamic-pretty-json-nested-authorization-sentinel\",\"token\":\"dynamic-pretty-json-token-sentinel\"}"
+  },
+  "cookie": "dynamic-pretty-json-cookie-sentinel",
+  "password": "dynamic-pretty-json-password-sentinel",
+  "secret": "dynamic-pretty-json-secret-sentinel",
+  "key": "dynamic-pretty-json-key-sentinel"
+}
+JSON
+fi
+if [[ -n "${F1_10_RUN_META_FILE:-}" ]]; then
+  printf '{"projectId":"00000000-0000-0000-0000-000000000001","runId":"00000000-0000-0000-0000-000000000002"}\n' > "${F1_10_RUN_META_FILE}"
+fi
+exit 0

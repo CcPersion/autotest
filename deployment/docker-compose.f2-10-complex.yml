@@ -1,0 +1,30 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 15
+
+  scenario-target:
+    image: python:3.10-slim
+    environment:
+      SCENARIO_TARGET_USERNAME: scenario-user
+      SCENARIO_TARGET_PASSWORD: scenario-password
+      SCENARIO_TARGET_TOKEN: scenario-token
+    volumes:
+      - ./fixtures/f2-10-scenario-target.py:/app/server.py:ro
+    command: ["python", "/app/server.py"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 15
+
+  runner-app:
+    depends_on:
+      redis:
+        condition: service_healthy
+      scenario-target:
+        condition: service_healthy

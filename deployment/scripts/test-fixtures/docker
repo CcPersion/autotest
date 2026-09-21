@@ -1,0 +1,68 @@
+#!/bin/bash
+set -u
+
+# F4-05 无 Compose 桩：只验证验收入口的参数、边界和失败路径，不启动服务。
+mode="${FAKE_DOCKER_MODE:-config-fail}"
+log_file="${FAKE_DOCKER_LOG:-}"
+if [[ -n "${log_file}" ]]; then
+  printf '%s\n' "$*" >> "${log_file}"
+  printf 'runner_env_id=%s\n' "${AUTOTEST_RUNNER_ID:-}" >> "${log_file}"
+fi
+
+if [[ "${1:-}" == "compose" ]]; then
+  shift
+  command_line=" $* "
+  if [[ "${command_line}" == *" config --quiet "* ]]; then
+    [[ "${mode}" == "config-fail" ]] && exit 42
+    exit 0
+  fi
+  if [[ "${command_line}" == *" down --volumes --remove-orphans "* ]]; then
+    exit 0
+  fi
+  if [[ "${command_line}" == *" up --detach --build --wait "* ]]; then
+    [[ "${mode}" == "up-fail" ]] && exit 19
+    exit 0
+  fi
+  if [[ "${command_line}" == *" restart postgres platform-api web runner-app "* ]]; then
+    exit 0
+  fi
+  if [[ "${command_line}" == *" ps --all --format json "* ]]; then
+    if [[ "${mode}" == "auth-flow" ]]; then
+      printf '%s\n' \
+        '{"Service":"postgres","State":"running","Health":"healthy"}' \
+        '{"Service":"platform-api","State":"running","Health":"healthy"}' \
+        '{"Service":"web","State":"running","Health":"healthy"}' \
+        '{"Service":"runner-app","State":"running","Health":"healthy"}'
+      exit 0
+    fi
+    exit 41
+  fi
+  if [[ "${command_line}" == *" ps -q runner-app "* ]]; then
+    printf 'abcdef0123456789abcdef0123456789\n'
+    exit 0
+  fi
+  exit 41
+fi
+
+if [[ "${1:-}" == "container" || "${1:-}" == "network" || "${1:-}" == "volume" ]]; then
+  if [[ "${mode}" == "resource-ls-fail" && "${2:-}" == "ls" ]]; then
+    exit 7
+  fi
+  if [[ "${mode}" == "inspect-fail" && "${1:-}" == "container" && "${2:-}" == "ls" ]]; then
+    printf 'fake-container-id\n'
+    exit 0
+  fi
+  if [[ "${2:-}" == "ls" ]]; then
+    exit 0
+  fi
+fi
+
+if [[ "${1:-}" == "inspect" ]]; then
+  [[ "${mode}" == "inspect-fail" ]] && exit 9
+  if [[ "$*" == *"State.StartedAt"* ]]; then
+    printf '2026-09-13T00:00:00.500000000Z\n'
+    exit 0
+  fi
+fi
+
+exit 41
