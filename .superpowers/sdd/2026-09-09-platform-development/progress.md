@@ -210,6 +210,22 @@
 - Sol 独立门禁：首轮审查 `gpt-5.6-sol/high` 发现 4 类阻断并交回 Luna；二轮审查确认前三类整改，唯一剩余的 Platform 密钥函数脱敏问题已修复；最终复审 `gpt-5.6-sol/high` 结论 `PASS`。
 - 未关闭风险：尚未执行完整 CLI→XML JTL→Runner→Platform 的“双断言同时失败”真实链路、动态试算 no-network/no-db 探针及本轮 Web 重跑；这些是后续 F2-03 整体验收证据，不把本轮首片 PASS 等同于任务整体完成。
 
+### F2-03 路径参数执行计划切片（2026-09-21）
+
+- 状态：本切片已完成，F2-03 整体仍进行中；不改变接口定义/用例持久化合同。
+- 实际修改：`PlanBuilder` 从原始 URL 一次解析定义 Path 参数，保证用例覆盖值优先；执行计划中的 `pathParams` 同步为本次运行的有效值，避免已覆盖的 `${变量}` 残留触发 Runner 预检；路径替换改为只扫描原始 URL，避免多参数值递归替换。
+- 新鲜验证：Platform `PlanBuilderContractTest` 8 项、`ScenarioRunPlanBuilderTest` 4 项、Runner `ExecutionPlanAdapterTest` 23 项全部通过；`git diff --check` 通过。
+- 独立复审：Sol `gpt-5.6-sol/high` 初审发现多参数递归替换阻断；整改后的最终复审结论 `PASS`。
+- 未验证边界：本切片未重跑 Compose/Playwright 真实 JMeter→JTL→Platform 报告全链路；该证据仍属于 F2-03 整体验收，不将其标记为已完成。
+
+### F2-03 报告请求 Header 合并切片（2026-09-22）
+
+- 状态：本切片已完成，F2-03 整体仍进行中；修复平台构建已保存接口执行计划时丢弃接口定义 headers 数组的问题。
+- 实际修改：`PlanBuilder.mergeEnvironmentHeaders` 现在保留环境默认 Header，按名称大小写不敏感让接口定义 Header 覆盖同名项并追加非同名项；新增 `PlanBuilderContractTest` 回归，覆盖 `value/enabled` 保留。
+- 定向验证：`mvn.cmd -q -pl platform-api -am "-Dtest=PlanBuilderContractTest,ScenarioRunPlanBuilderTest" "-Dsurefire.failIfNoSpecifiedTests=false" test` 通过，PlanBuilderContractTest 9 项、ScenarioRunPlanBuilderTest 4 项均 failures=0/errors=0；`git diff --check` 通过。
+- 审查：Sol（`gpt-5.6-sol`，high）独立审查最终 `PASS`，确认 13/13 定向测试通过且未改变公共 API/数据契约。
+- 真实流程证据：隔离 F1-09 Chromium 流程已越过此前报告请求 Header 断言失败点，并实际访问 `/orders/1001`；本次最终在后续第二个“不可达环境”创建步骤等待响应时失败，故不宣称 F2-03 真实 Compose/Playwright 全链路完成。
+
 ## F2-04（数据行编辑与结构校验首个切片）
 
 - 状态：进行中（2026-09-12）；已完成数据行资产编辑、CSV 交换和保存前结构校验，尚未宣称多数据行实际执行、逐行变量作用域或报告分组完成。

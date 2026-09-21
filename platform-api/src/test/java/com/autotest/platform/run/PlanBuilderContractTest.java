@@ -1,6 +1,7 @@
 package com.autotest.platform.run;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.autotest.platform.api.ApiCaseRecord;
 import com.autotest.platform.api.ApiCaseRepository;
 import com.autotest.platform.api.ApiDefinitionRecord;
 import com.autotest.platform.api.ApiDefinitionRepository;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlanBuilderContractTest {
     @Test
@@ -59,6 +61,172 @@ class PlanBuilderContractTest {
                 .buildSavedDefinition(projectId, definitionId, environmentId);
 
         assertEquals("demo", plan.path("variableScopes").path("environment").path("tenant").asText());
+    }
+
+    @Test
+    void savedDefinitionMergesEnvironmentAndDefinitionHeaders() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        UUID projectId = UUID.randomUUID();
+        UUID definitionId = UUID.randomUUID();
+        UUID environmentId = UUID.randomUUID();
+        ApiDefinitionRepository definitions = mock(ApiDefinitionRepository.class);
+        ApiCaseRepository cases = mock(ApiCaseRepository.class);
+        EnvironmentRepository environments = mock(EnvironmentRepository.class);
+        ApiDefinitionRecord definition = new ApiDefinitionRecord(definitionId, projectId, null, "headers",
+                "GET", "/orders", json.readTree("""
+                {"pathParams":[],"query":[],"headers":[
+                  {"name":"X-Override","value":"definition","enabled":true},
+                  {"name":"X-Definition","value":"definition-only","enabled":true}],
+                 "cookies":[],"body":{"type":"NONE"}}
+                """), 0, false, null, null);
+        var environmentOptions = json.createObjectNode();
+        environmentOptions.set("defaultHeaders", json.readTree("""
+                [{"name":"X-Env","value":"env","enabled":true},
+                 {"name":"x-override","value":"environment","enabled":false}]
+                """));
+        EnvironmentRecord environment = new EnvironmentRecord(environmentId, projectId, "local",
+                "http://target:8080", json.createObjectNode(), environmentOptions, 0,
+                false, Instant.now(), Instant.now());
+        when(definitions.findById(projectId, definitionId)).thenReturn(definition);
+        when(environments.findById(projectId, environmentId)).thenReturn(environment);
+
+        var headers = new PlanBuilder(definitions, cases, environments, json)
+                .buildSavedDefinition(projectId, definitionId, environmentId).path("headers");
+
+        assertEquals(3, headers.size());
+        assertEquals("env", headers.get(0).path("value").asText());
+        assertEquals("definition", headers.get(1).path("value").asText());
+        assertTrue(headers.get(1).path("enabled").asBoolean());
+        assertEquals("definition-only", headers.get(2).path("value").asText());
+    }
+
+    @Test
+    void savedDefinitionResolvesPathAndKeepsEffectiveDefinitionPathParamValue() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        UUID projectId = UUID.randomUUID();
+        UUID definitionId = UUID.randomUUID();
+        UUID environmentId = UUID.randomUUID();
+        ApiDefinitionRepository definitions = mock(ApiDefinitionRepository.class);
+        ApiCaseRepository cases = mock(ApiCaseRepository.class);
+        EnvironmentRepository environments = mock(EnvironmentRepository.class);
+        ApiDefinitionRecord definition = new ApiDefinitionRecord(definitionId, projectId, null, "订单",
+                "GET", "/orders/{orderId}", json.readTree("""
+                {"pathParams":[{"name":"orderId","value":"1001","enabled":true}],"query":[],
+                 "headers":[{"name":"x-shared","value":"definition","enabled":false},
+                 {"name":"X-Definition-Only","value":"definition-only","enabled":true}],
+                 "cookies":[],"body":{"type":"NONE"}}
+                """), 0, false, null, null);
+        EnvironmentRecord environment = new EnvironmentRecord(environmentId, projectId, "local",
+                "http://target:8080", json.createObjectNode(), json.readTree("""
+                {"defaultHeaders":[{"name":"X-Shared","value":"environment","enabled":true},
+                 {"name":"X-Environment-Only","value":"environment-only","enabled":false}]}
+                """), 0,
+                false, Instant.now(), Instant.now());
+        when(definitions.findById(projectId, definitionId)).thenReturn(definition);
+        when(environments.findById(projectId, environmentId)).thenReturn(environment);
+
+        var plan = new PlanBuilder(definitions, cases, environments, json)
+                .buildSavedDefinition(projectId, definitionId, environmentId);
+
+        assertEquals("/orders/1001", plan.path("urlTemplate").asText());
+        assertEquals("1001", plan.path("pathParams").get(0).path("value").asText());
+        assertEquals(json.readTree("""
+                [{"name":"x-shared","value":"definition","enabled":false},
+                 {"name":"X-Environment-Only","value":"environment-only","enabled":false},
+                 {"name":"X-Definition-Only","value":"definition-only","enabled":true}]
+                """), plan.path("headers"));
+    }
+
+    @Test
+    void savedDefinitionResolvesPathParametersInOnePass() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        UUID projectId = UUID.randomUUID();
+        UUID definitionId = UUID.randomUUID();
+        UUID environmentId = UUID.randomUUID();
+        ApiDefinitionRepository definitions = mock(ApiDefinitionRepository.class);
+        ApiCaseRepository cases = mock(ApiCaseRepository.class);
+        EnvironmentRepository environments = mock(EnvironmentRepository.class);
+        ApiDefinitionRecord definition = new ApiDefinitionRecord(definitionId, projectId, null, "多路径",
+                "GET", "/orders/{tenant}/{orderId}", json.readTree("""
+                {"pathParams":[{"name":"tenant","value":"${orderId}","enabled":true},
+                 {"name":"orderId","value":"2002","enabled":true}],"query":[],
+                 "headers":[],"cookies":[],"body":{"type":"NONE"}}
+                """), 0, false, null, null);
+        EnvironmentRecord environment = new EnvironmentRecord(environmentId, projectId, "local",
+                "http://target:8080", json.createObjectNode(), json.createObjectNode(), 0,
+                false, Instant.now(), Instant.now());
+        when(definitions.findById(projectId, definitionId)).thenReturn(definition);
+        when(environments.findById(projectId, environmentId)).thenReturn(environment);
+
+        var plan = new PlanBuilder(definitions, cases, environments, json)
+                .buildSavedDefinition(projectId, definitionId, environmentId);
+
+        assertEquals("/orders/${orderId}/2002", plan.path("urlTemplate").asText());
+    }
+
+    @Test
+    void savedCaseOverrideResolvesPathAndUpdatesEffectivePathParamValue() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        UUID projectId = UUID.randomUUID();
+        UUID definitionId = UUID.randomUUID();
+        UUID caseId = UUID.randomUUID();
+        UUID environmentId = UUID.randomUUID();
+        ApiDefinitionRepository definitions = mock(ApiDefinitionRepository.class);
+        ApiCaseRepository cases = mock(ApiCaseRepository.class);
+        EnvironmentRepository environments = mock(EnvironmentRepository.class);
+        ApiDefinitionRecord definition = new ApiDefinitionRecord(definitionId, projectId, null, "订单",
+                "GET", "/orders/{orderId}", json.readTree("""
+                {"pathParams":[{"name":"orderId","value":"${orderId}","enabled":true}],"query":[],
+                 "headers":[],"cookies":[],"body":{"type":"NONE"}}
+                """), 0, false, null, null);
+        ApiCaseRecord apiCase = new ApiCaseRecord(caseId, projectId, definitionId, "订单 2002", json.readTree("""
+                {"pathParams":{"orderId":"2002"},"query":{},"headers":{},"cookies":{},
+                 "body":{"type":"NONE"},"extractors":[]}
+                """), json.createObjectNode(), json.createArrayNode(), 0, false, null, null);
+        EnvironmentRecord environment = new EnvironmentRecord(environmentId, projectId, "local",
+                "http://target:8080", json.createObjectNode(), json.createObjectNode(), 0,
+                false, Instant.now(), Instant.now());
+        when(cases.findActiveByProjectId(projectId, caseId)).thenReturn(apiCase);
+        when(definitions.findById(projectId, definitionId)).thenReturn(definition);
+        when(environments.findById(projectId, environmentId)).thenReturn(environment);
+
+        var plan = new PlanBuilder(definitions, cases, environments, json)
+                .buildSavedCase(projectId, caseId, environmentId);
+
+        assertEquals("/orders/2002", plan.path("urlTemplate").asText());
+        assertEquals("2002", plan.path("pathParams").get(0).path("value").asText());
+    }
+
+    @Test
+    void savedCaseWithoutPathOverrideKeepsDefinitionPathParamValue() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        UUID projectId = UUID.randomUUID();
+        UUID definitionId = UUID.randomUUID();
+        UUID caseId = UUID.randomUUID();
+        UUID environmentId = UUID.randomUUID();
+        ApiDefinitionRepository definitions = mock(ApiDefinitionRepository.class);
+        ApiCaseRepository cases = mock(ApiCaseRepository.class);
+        EnvironmentRepository environments = mock(EnvironmentRepository.class);
+        ApiDefinitionRecord definition = new ApiDefinitionRecord(definitionId, projectId, null, "订单",
+                "GET", "/orders/{orderId}", json.readTree("""
+                {"pathParams":[{"name":"orderId","value":"${orderId}","enabled":true}],"query":[],
+                 "headers":[],"cookies":[],"body":{"type":"NONE"}}
+                """), 0, false, null, null);
+        ApiCaseRecord apiCase = new ApiCaseRecord(caseId, projectId, definitionId, "订单默认", json.readTree("""
+                {"pathParams":{},"query":{},"headers":{},"cookies":{},"body":{"type":"NONE"},"extractors":[]}
+                """), json.createObjectNode(), json.createArrayNode(), 0, false, null, null);
+        EnvironmentRecord environment = new EnvironmentRecord(environmentId, projectId, "local",
+                "http://target:8080", json.createObjectNode(), json.createObjectNode(), 0,
+                false, Instant.now(), Instant.now());
+        when(cases.findActiveByProjectId(projectId, caseId)).thenReturn(apiCase);
+        when(definitions.findById(projectId, definitionId)).thenReturn(definition);
+        when(environments.findById(projectId, environmentId)).thenReturn(environment);
+
+        var plan = new PlanBuilder(definitions, cases, environments, json)
+                .buildSavedCase(projectId, caseId, environmentId);
+
+        assertEquals("/orders/${orderId}", plan.path("urlTemplate").asText());
+        assertEquals("${orderId}", plan.path("pathParams").get(0).path("value").asText());
     }
 
     @Test

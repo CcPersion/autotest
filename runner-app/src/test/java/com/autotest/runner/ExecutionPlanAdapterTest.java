@@ -1,6 +1,7 @@
 package com.autotest.runner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -11,8 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExecutionPlanAdapterTest {
@@ -45,6 +48,23 @@ class ExecutionPlanAdapterTest {
         assertEquals(1, plan.query().size());
         assertEquals(2, plan.assertions().size());
         assertTrue(plan.body().value().get("ok").asBoolean());
+    }
+
+    @Test
+    void pathOverrideRemovesCoveredDefaultFromRunnerPreflight() throws Exception {
+        var covered = json.readTree("""
+                {"planId":"covered-path","baseUrl":"http://127.0.0.1","method":"GET",
+                 "urlTemplate":"/orders/2002",
+                 "pathParams":[{"name":"orderId","value":"2002","enabled":true}],
+                 "body":{"type":"NONE"}}
+                """);
+
+        assertDoesNotThrow(() -> ExecutionPlanAdapter.fromJson(covered));
+
+        var unresolved = (ObjectNode) covered.deepCopy();
+        unresolved.put("urlTemplate", "/orders/${orderId}");
+        ((ObjectNode) unresolved.path("pathParams").get(0)).put("value", "${orderId}");
+        assertThrows(IllegalArgumentException.class, () -> ExecutionPlanAdapter.fromJson(unresolved));
     }
 
     @Test

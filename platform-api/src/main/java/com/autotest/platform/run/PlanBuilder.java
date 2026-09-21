@@ -73,7 +73,7 @@ public class PlanBuilder {
         ApiDefinitionRecord definition = definitions.findById(projectId, definitionId);
         if (definition == null || definition.archived()) throw invalid("TARGET_NOT_FOUND", "接口定义不存在或已归档");
         EnvironmentRecord environment = environment(projectId, environmentId);
-        return buildDefinition(projectId, environment, definition, "definition-" + definition.id(), null);
+        return buildDefinition(projectId, environment, definition, "definition-" + definition.id(), null, null);
     }
 
     public JsonNode buildDraftDefinition(UUID projectId, UUID environmentId, String method,
@@ -84,7 +84,7 @@ public class PlanBuilder {
         ApiDefinitionRecord draft = new ApiDefinitionRecord(UUID.randomUUID(), projectId, null,
                 "draft", method == null ? "" : method.toUpperCase(Locale.ROOT), urlTemplate,
                 draftSpec, 0, false, null, null);
-        return buildDefinition(projectId, environment, draft, "draft-" + UUID.randomUUID(), null);
+        return buildDefinition(projectId, environment, draft, "draft-" + UUID.randomUUID(), null, null);
     }
 
     public EnvironmentRecord environment(UUID projectId, UUID environmentId) {
@@ -118,13 +118,12 @@ public class PlanBuilder {
     private ObjectNode buildCase(UUID projectId, EnvironmentRecord environment,
                                  ApiDefinitionRecord definition, ApiCaseRecord apiCase,
                                  String planId, String stepId) {
-        ObjectNode plan = buildDefinition(projectId, environment, definition, planId, stepId);
         JsonNode caseSpec = apiCase.caseSpec();
+        ObjectNode plan = buildDefinition(projectId, environment, definition, planId, stepId,
+                caseSpec.path("pathParams"));
         plan.set("query", mergeArray(plan.path("query"), caseSpec.path("query"), false));
         plan.set("headers", mergeArray(plan.path("headers"), caseSpec.path("headers"), true));
         plan.set("cookies", mergeArray(plan.path("cookies"), caseSpec.path("cookies"), true));
-        plan.put("urlTemplate", resolvePath(plan.path("urlTemplate").asText(),
-                definition.requestSpec().path("pathParams"), caseSpec.path("pathParams")));
         JsonNode body = caseSpec.path("body");
         if (body.isObject() && body.has("type") && body.path("type").asText().equals(plan.path("body").path("type").asText())) {
             plan.set("body", body.deepCopy());
@@ -147,7 +146,8 @@ public class PlanBuilder {
     }
 
     private ObjectNode buildDefinition(UUID projectId, EnvironmentRecord environment,
-                                       ApiDefinitionRecord definition, String planId, String stepId) {
+                                       ApiDefinitionRecord definition, String planId, String stepId,
+                                       JsonNode pathOverrides) {
         ObjectNode plan = json.createObjectNode();
         plan.put("jmeterVersion", "5.6.3");
         plan.put("projectId", projectId.toString());
@@ -155,9 +155,10 @@ public class PlanBuilder {
         if (stepId != null) plan.put("stepId", stepId);
         plan.put("baseUrl", environment.baseUrl());
         plan.put("method", definition.method());
-        plan.put("urlTemplate", definition.urlTemplate());
         JsonNode spec = definition.requestSpec();
-        plan.set("pathParams", spec.path("pathParams").deepCopy());
+        JsonNode declaredPathParams = spec.path("pathParams");
+        plan.put("urlTemplate", resolvePath(definition.urlTemplate(), declaredPathParams, pathOverrides));
+        plan.set("pathParams", effectivePathParams(declaredPathParams, pathOverrides));
         plan.set("query", spec.path("query").deepCopy());
         plan.set("headers", mergeEnvironmentHeaders(environment.requestOptions(), spec.path("headers")));
         plan.set("cookies", spec.path("cookies").deepCopy());
@@ -171,6 +172,21 @@ public class PlanBuilder {
         ObjectNode scopes = plan.putObject("variableScopes");
         scopes.set("environment", environment.variables().deepCopy());
         return plan;
+    }
+
+    private ArrayNode effectivePathParams(JsonNode declared, JsonNode overrides) {
+        ArrayNode result = json.createArrayNode();
+        if (declared == null || !declared.isArray()) return result;
+        for (JsonNode item : declared) {
+            JsonNode copy = item.deepCopy();
+            if (copy instanceof ObjectNode object && overrides != null && overrides.isObject()) {
+                String name = object.path("name").asText();
+                JsonNode override = overrides.get(name);
+                if (override != null) object.set("value", override.deepCopy());
+            }
+            result.add(copy);
+        }
+        return result;
     }
 
     private void attachFileSnapshots(UUID projectId, JsonNode plan) {
@@ -225,7 +241,22 @@ public class PlanBuilder {
         ArrayNode result = json.createArrayNode();
         JsonNode defaults = environmentOptions == null ? null : environmentOptions.path("defaultHeaders");
         if (defaults != null && defaults.isArray()) defaults.forEach(value -> result.add(value.deepCopy()));
-        return mergeArray(result, declared, true);
+        if (declared != null && declared.isArray()) {
+            for (JsonNode header : declared) {
+                String name = header.path("name").asText();
+                int match = -1;
+                for (int i = 0; i < result.size(); i++) {
+                    if (result.get(i).path("name").asText().equalsIgnoreCase(name)) {
+                        match = i;
+                        break;
+                    }
+                }
+                JsonNode copy = header.deepCopy();
+                if (match >= 0) result.set(match, copy);
+                else result.add(copy);
+            }
+        }
+        return result;
     }
 
     private ArrayNode mergeArray(JsonNode declared, JsonNode overrides, boolean caseInsensitive) {
@@ -286,16 +317,41 @@ public class PlanBuilder {
     }
 
     private String resolvePath(String url, JsonNode declared, JsonNode overrides) {
-        String resolved = url;
+        Map<String, JsonNode> values = new java.util.HashMap<>();
         if (declared != null && declared.isArray()) {
             for (JsonNode item : declared) {
                 String name = item.path("name").asText();
                 JsonNode value = overrides == null ? null : overrides.get(name);
                 if (value == null) value = item.get("value");
-                resolved = resolved.replace("{" + name + "}", value == null ? "" : value.asText());
+                values.put(name, value);
             }
         }
-        return resolved;
+        StringBuilder resolved = new StringBuilder(url == null ? "" : url);
+        if (url == null || url.isEmpty() || values.isEmpty()) return resolved.toString();
+        resolved.setLength(0);
+        int cursor = 0;
+        while (cursor < url.length()) {
+            int start = url.indexOf('{', cursor);
+            if (start < 0) {
+                resolved.append(url, cursor, url.length());
+                break;
+            }
+            int end = url.indexOf('}', start + 1);
+            if (end < 0) {
+                resolved.append(url, cursor, url.length());
+                break;
+            }
+            resolved.append(url, cursor, start);
+            String name = url.substring(start + 1, end);
+            if (values.containsKey(name)) {
+                JsonNode value = values.get(name);
+                if (value != null) resolved.append(value.asText());
+            } else {
+                resolved.append(url, start, end + 1);
+            }
+            cursor = end + 1;
+        }
+        return resolved.toString();
     }
 
     private static ApiDomainException invalid(String code, String message) {
